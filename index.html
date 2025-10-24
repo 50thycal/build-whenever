@@ -307,6 +307,29 @@ let isRunning = false;
 let paused = false;
 let lastSelectedMs = durationMs;
 let rafId = null;
+let wakeLock = null;
+
+/* Wake Lock: keep screen awake during meditation */
+async function requestWakeLock() {
+  if ('wakeLock' in navigator && isRunning && !paused) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {
+      // Wake lock request failed - not critical, timer still works
+    }
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock !== null) {
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+    } catch (err) {
+      // Wake lock release failed - not critical
+    }
+  }
+}
 
 /* Audio: create soft chime (WebAudio) */
 function ensureAudio() {
@@ -372,6 +395,7 @@ function startTimer(ms) {
   startBtn.disabled = true;
   pauseBtn.disabled = false;
   resetBtn.disabled = false;
+  requestWakeLock();
   loop();
 }
 
@@ -380,6 +404,7 @@ function pauseTimer() {
   paused = true;
   remainingMs = Math.max(0, targetTs - Date.now());
   cancelAnimationFrame(rafId);
+  releaseWakeLock();
   startBtn.textContent = 'Resume';
   startBtn.disabled = false;
   pauseBtn.disabled = true;
@@ -391,6 +416,7 @@ function resumeTimer() {
   targetTs = Date.now() + remainingMs;
   startBtn.disabled = true;
   pauseBtn.disabled = false;
+  requestWakeLock();
   loop();
 }
 
@@ -398,6 +424,7 @@ function resetTimer() {
   isRunning = false;
   paused = false;
   cancelAnimationFrame(rafId);
+  releaseWakeLock();
   render(lastSelectedMs);
   startBtn.textContent = 'Start';
   startBtn.disabled = false;
@@ -415,6 +442,7 @@ function loop() {
   if (left <= 0) {
     isRunning = false;
     cancelAnimationFrame(rafId);
+    releaseWakeLock();
     startBtn.textContent = 'Start';
     startBtn.disabled = false;
     pauseBtn.disabled = true;
@@ -484,8 +512,13 @@ customForm.addEventListener('submit', (e) => {
 
 document.addEventListener('visibilitychange', () => {
   if (!isRunning || paused) return;
+  // Re-render based on absolute target
   const left = Math.max(0, targetTs - Date.now());
   render(left);
+  // Re-acquire wake lock if page becomes visible during active session
+  if (document.visibilityState === 'visible') {
+    requestWakeLock();
+  }
 });
 
 render(lastSelectedMs);
