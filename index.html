@@ -1,10 +1,98 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Hello World</title>
+  <meta charset="utf-8" />
+  <title>Meditate</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0b" />
+  <!-- iOS standalone -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="public/icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preload" as="style" href="styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <h1>Hello World!</h1>
-    <p>If you can see this, Vercel is working correctly.</p>
+  <header class="appbar">
+    <h1>Meditate</h1>
+    <button id="infoBtn" aria-label="Open help" class="ghost">ⓘ</button>
+  </header>
+
+  <main class="container">
+    <section class="chip-row" role="group" aria-label="Session durations">
+      <button class="chip" data-min="3">3m</button>
+      <button class="chip" data-min="5">5m</button>
+      <button class="chip" data-min="10">10m</button>
+      <button class="chip" data-min="15">15m</button>
+      <button class="chip" id="customBtn">Custom…</button>
+    </section>
+
+    <section class="timer-card">
+      <div class="ring" id="ring" aria-hidden="true"></div>
+      <div class="time" id="time" aria-live="polite">05:00</div>
+
+      <div class="controls">
+        <button id="startBtn" class="primary">Start</button>
+        <button id="pauseBtn" class="ghost" disabled>Pause</button>
+        <button id="resetBtn" class="ghost" disabled>Reset</button>
+      </div>
+
+      <div class="status">
+        <button id="testToneBtn" class="link" aria-label="Test end chime (unlocks audio)">test tone</button>
+        <span id="soundHint" class="hint">• end tone enabled</span>
+      </div>
+    </section>
+  </main>
+
+  <div id="completeSheet" class="sheet" hidden>
+    <div class="sheet-body">
+      <h2>Session complete</h2>
+      <div class="sheet-actions">
+        <button id="replayBtn" class="primary">Replay</button>
+        <button id="chooseBtn" class="ghost">Choose another</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="iosA2H" class="a2h" hidden>
+    <p>Add to Home for a clean, fullscreen experience.</p>
+    <button id="dismissA2H" class="link">dismiss</button>
+  </div>
+
+  <dialog id="customDialog">
+    <form method="dialog" id="customForm">
+      <h3>Custom time</h3>
+      <div class="grid">
+        <label>Minutes
+          <input id="minInput" type="number" inputmode="numeric" min="0" max="999" value="5" />
+        </label>
+        <label>Seconds
+          <input id="secInput" type="number" inputmode="numeric" min="0" max="59" value="0" />
+        </label>
+      </div>
+      <menu>
+        <button value="cancel" class="ghost">Cancel</button>
+        <button value="ok" class="primary">Set</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="helpDialog">
+    <article>
+      <h3>Meditate — minimal timer</h3>
+      <p>Pick a time, press Start. The app plays a soft chime when done.</p>
+      <ul>
+        <li>Add to Home for fullscreen.</li>
+        <li>Audio unlocks on your first tap.</li>
+        <li>Timing stays accurate even if the screen sleeps.</li>
+      </ul>
+      <form method="dialog">
+        <button class="primary">Close</button>
+      </form>
+    </article>
+  </dialog>
+
+  <script src="app.js" defer></script>
 </body>
 </html>
