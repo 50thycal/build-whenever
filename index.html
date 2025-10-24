@@ -120,7 +120,7 @@ body {
 .status { margin-top: -8px; }
 
 .sheet[open], dialog[open] { display: block; }
-.sheet {
+.sheet:not([hidden]) {
   position: fixed;
   inset: 0;
   display: grid;
