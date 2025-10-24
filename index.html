@@ -490,14 +490,15 @@ document.addEventListener('visibilitychange', () => {
 
 render(lastSelectedMs);
 
-(function showA2H() {
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (isIos && !isStandalone) {
-    iosA2H.hidden = false;
-  }
-})();
-dismissA2H.addEventListener('click', () => { iosA2H.hidden = true; });
+// Disabled iOS Add to Home notification for now
+// (function showA2H() {
+//   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+//   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+//   if (isIos && !isStandalone) {
+//     iosA2H.hidden = false;
+//   }
+// })();
+// dismissA2H.addEventListener('click', () => { iosA2H.hidden = true; });
   </script>
 </body>
 </html>
