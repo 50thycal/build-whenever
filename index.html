@@ -334,38 +334,71 @@ async function releaseWakeLock() {
 /* Audio: create soft chime (WebAudio) */
 function ensureAudio() {
   if (!ac) {
-    ac = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('AudioContext created, state:', ac.state);
+    } catch (err) {
+      console.error('Failed to create AudioContext:', err);
+      soundHint.textContent = '• audio not supported';
+      return false;
+    }
   }
+  return true;
 }
+
 async function unlockAudio() {
-  ensureAudio();
+  if (!ensureAudio()) return;
+
+  console.log('Attempting to unlock audio, current state:', ac.state);
+
   if (ac.state === 'suspended') {
-    try { await ac.resume(); } catch {}
+    try {
+      await ac.resume();
+      console.log('AudioContext resumed, new state:', ac.state);
+    } catch (err) {
+      console.error('Failed to resume AudioContext:', err);
+      soundHint.textContent = '• audio unlock failed';
+      return;
+    }
   }
+
   audioUnlocked = ac.state === 'running';
-  soundHint.textContent = audioUnlocked ? '• end tone enabled' : '• tap "test tone" if sound is blocked';
+  console.log('Audio unlocked:', audioUnlocked);
+  soundHint.textContent = audioUnlocked ? '• end tone enabled' : '• tap "test tone" to enable sound';
 }
 
 function playChime() {
-  if (!audioUnlocked) return;
-  ensureAudio();
+  console.log('playChime called, audioUnlocked:', audioUnlocked);
 
-  const now = ac.currentTime;
-  const duration = 1.25;
-  const osc = ac.createOscillator();
-  const gain = ac.createGain();
+  if (!audioUnlocked) {
+    console.log('Audio not unlocked, skipping chime');
+    return;
+  }
 
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(520, now);
-  osc.frequency.linearRampToValueAtTime(660, now + duration);
+  if (!ensureAudio()) return;
 
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.08, now + 0.06);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  try {
+    const now = ac.currentTime;
+    const duration = 1.25;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
 
-  osc.connect(gain).connect(ac.destination);
-  osc.start(now);
-  osc.stop(now + duration);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.linearRampToValueAtTime(660, now + duration);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.06);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+
+    console.log('Chime played successfully');
+  } catch (err) {
+    console.error('Failed to play chime:', err);
+  }
 }
 
 function fmt(ms) {
