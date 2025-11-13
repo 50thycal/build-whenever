@@ -185,6 +185,45 @@ input[type="number"] {
   justify-content: space-between;
   align-items: center;
 }
+
+/* --- Visual overlays: flash + dim --- */
+
+#flashOverlay,
+#dimOverlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999; /* above app UI */
+}
+
+/* Flash: bright white, used briefly at session end */
+#flashOverlay {
+  background: #ffffff;
+  opacity: 0;
+}
+
+.flash-on {
+  animation: flashScreen 1.2s ease-out 1;
+}
+
+@keyframes flashScreen {
+  0% { opacity: 0; }
+  15% { opacity: 1; }      /* full flash */
+  40% { opacity: 0.1; }    /* fade back down */
+  65% { opacity: 1; }      /* second flash */
+  100% { opacity: 0; }     /* back to dark */
+}
+
+/* Dim overlay: dark veil over the whole app while running */
+#dimOverlay {
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.4s ease-out;
+}
+
+/* When dimmed, make the app *almost* completely dark */
+body.dimmed #dimOverlay {
+  background: rgba(0, 0, 0, 0.9);
+}
   </style>
 </head>
 <body>
@@ -267,6 +306,10 @@ input[type="number"] {
     </article>
   </dialog>
 
+  <!-- Visual overlays for flash + dim -->
+  <div id="flashOverlay"></div>
+  <div id="dimOverlay"></div>
+
   <script>
 /* Meditate — MVP timer with WebAudio chime */
 
@@ -295,6 +338,9 @@ const chooseBtn = el('chooseBtn');
 const iosA2H = el('iosA2H');
 const dismissA2H = el('dismissA2H');
 
+const flashOverlay = el('flashOverlay');
+const dimOverlay = el('dimOverlay');
+
 const chips = Array.from(document.querySelectorAll('.chip-row .chip'));
 
 let audioUnlocked = false;
@@ -308,6 +354,9 @@ let paused = false;
 let lastSelectedMs = durationMs;
 let rafId = null;
 let wakeLock = null;
+
+const dimTimeoutMs = 5000; // 5 seconds of no interaction
+let dimTimerId = null;
 
 /* Wake Lock: keep screen awake during meditation */
 async function requestWakeLock() {
@@ -401,6 +450,51 @@ function playChime() {
   }
 }
 
+/* --- Flash overlay at session end --- */
+function triggerFlash() {
+  if (!flashOverlay) return;
+
+  // Restart animation if already in progress
+  flashOverlay.classList.remove('flash-on');
+  // Force reflow so the animation can re-trigger
+  void flashOverlay.offsetWidth;
+  flashOverlay.classList.add('flash-on');
+}
+
+/* --- Dim behavior during running sessions --- */
+
+function scheduleDim() {
+  clearTimeout(dimTimerId);
+  if (!isRunning || paused) {
+    document.body.classList.remove('dimmed');
+    return;
+  }
+  dimTimerId = setTimeout(() => {
+    if (isRunning && !paused) {
+      document.body.classList.add('dimmed');
+    }
+  }, dimTimeoutMs);
+}
+
+function clearDim() {
+  clearTimeout(dimTimerId);
+  document.body.classList.remove('dimmed');
+}
+
+/* Any interaction should clear dim + restart the dim timer if running */
+['pointerdown', 'touchstart', 'keydown'].forEach(evt => {
+  window.addEventListener(
+    evt,
+    () => {
+      clearDim();
+      if (isRunning && !paused) {
+        scheduleDim();
+      }
+    },
+    { passive: true }
+  );
+});
+
 function fmt(ms) {
   const s = Math.max(0, Math.round(ms / 1000));
   const mm = String(Math.floor(s / 60)).padStart(2, '0');
@@ -429,6 +523,7 @@ function startTimer(ms) {
   pauseBtn.disabled = false;
   resetBtn.disabled = false;
   requestWakeLock();
+  scheduleDim();
   loop();
 }
 
@@ -438,6 +533,7 @@ function pauseTimer() {
   remainingMs = Math.max(0, targetTs - Date.now());
   cancelAnimationFrame(rafId);
   releaseWakeLock();
+  clearDim();
   startBtn.textContent = 'Resume';
   startBtn.disabled = false;
   pauseBtn.disabled = true;
@@ -450,6 +546,7 @@ function resumeTimer() {
   startBtn.disabled = true;
   pauseBtn.disabled = false;
   requestWakeLock();
+  scheduleDim();
   loop();
 }
 
@@ -458,6 +555,7 @@ function resetTimer() {
   paused = false;
   cancelAnimationFrame(rafId);
   releaseWakeLock();
+  clearDim();
   render(lastSelectedMs);
   startBtn.textContent = 'Start';
   startBtn.disabled = false;
@@ -476,6 +574,8 @@ function loop() {
     isRunning = false;
     cancelAnimationFrame(rafId);
     releaseWakeLock();
+    clearDim();
+    triggerFlash();
     startBtn.textContent = 'Start';
     startBtn.disabled = false;
     pauseBtn.disabled = true;
