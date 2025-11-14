@@ -551,11 +551,21 @@ function resumeTimer() {
 }
 
 function resetTimer() {
+  // HARD RESET of all timer state
   isRunning = false;
   paused = false;
-  cancelAnimationFrame(rafId);
+  targetTs = null;
+  remainingMs = lastSelectedMs;
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+
+  // Release resources
   releaseWakeLock();
   clearDim();
+
+  // UI reset
   render(lastSelectedMs);
   startBtn.textContent = 'Start';
   startBtn.disabled = false;
